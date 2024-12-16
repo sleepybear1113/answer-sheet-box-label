@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>答题卡装箱单生成工具 - by sleepybear</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .input-container {
+            margin-bottom: 20px;
+        }
+
+        .input-field {
+            margin: 5px;
+            padding: 5px;
+        }
+
+        .print-area {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            position: relative;
+            left: -7mm;
+        }
+
+        .box {
+            border: 2px solid black;
+            border-radius: 80px;
+            position: relative;
+            padding: 20px;
+            width: 80%;
+            height: 100mm;
+            margin: 0; /* 移除原有的 margin */
+        }
+
+        .region {
+            position: absolute;
+            top: 60px;
+            left: 60px;
+            border: 1px solid black;
+            padding: 5px 10px;
+            font-size: 35px;
+            font-family: 方正小标宋简体, serif;
+            font-weight: bold;
+        }
+
+        .box-number {
+            position: absolute;
+            top: 40px;
+            right: 60px;
+            border: 1px solid black;
+            width: 180px;
+            text-align: center;
+            font-size: 40px;
+            font-family: 方正小标宋简体, serif;
+            font-weight: bold;
+        }
+
+        .box-number-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 5px;
+        }
+
+        .box-label {
+            font-size: 25px;
+            font-weight: bold;
+            font-family: 方正小标宋简体, serif;
+            margin-right: 10px;
+        }
+
+        .box-number-content {
+            padding: 5px;
+        }
+
+        .divider {
+            border-top: 1px solid black;
+        }
+
+        .subject-type {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-weight: bold;
+            font-family: 方正小标宋简体, serif;
+            white-space: nowrap; /* 防止文字换行 */
+            width: auto; /* 允许宽度自适应 */
+            min-width: 400px; /* 设置最小宽度 */
+            text-align: center; /* 文字居中 */
+        }
+
+        .page {
+            width: 210mm;
+            height: 297mm;
+            padding: 5mm 10mm 10mm;
+            margin: 0;
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20mm;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        /* 添加新样式用于定位单个框 */
+        .box-container {
+            width: 100%;
+            flex: 0 0 120mm; /* 固定度 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .box-container:first-child {
+            margin-top: 20mm; /* 调整第一个框到顶部的距离 */
+        }
+
+        .page-title {
+            text-align: center;
+            font-size: 36px;
+            font-family: 方正小标宋简体, serif;
+            font-weight: bold;
+            margin-bottom: 10mm;
+        }
+
+        @media print {
+            .input-container {
+                display: none;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+
+            .print-area {
+                left: 0;
+                transform: translateX(-5mm);
+            }
+        }
+
+        /* 添加页面标题样式 */
+        .html-title {
+            text-align: center;
+            font-size: 24px;
+            font-family: 方正小标宋简体, serif;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        /* 调整输入容器的样式 */
+        .input-container {
+            margin: 20px 0; /* 改为靠左 */
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            max-width: 800px; /* 限制最大宽度 */
+        }
+
+        .subject-row {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-bottom: 1px solid #eee;
+            display: none; /* 默认隐藏所有行 */
+        }
+
+        .subject-row.visible {
+            display: block; /* 显示选中的行 */
+        }
+
+        .subject-inputs {
+            display: grid;
+            grid-template-columns: 90px 120px 75px 80px 85px 80px 115px 80px;
+            gap: 1px;
+            align-items: center;
+        }
+
+        .input-field {
+            width: 100%;
+            margin: 0 0 0 -15px;
+            box-sizing: border-box;
+        }
+
+        label {
+            white-space: nowrap;
+            font-size: 14px;
+        }
+
+        .radio-group {
+            margin: 10px 0;
+        }
+
+        .radio-group label {
+            margin-right: 20px;
+        }
+
+        .radio-group input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .manual-input-area {
+            display: none;
+            margin: 10px 0;
+        }
+
+        .manual-input-area.visible {
+            display: block;
+        }
+
+        #subjectData {
+            width: 100%;
+            height: 150px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
+        .button-group {
+            margin: 10px 0;
+        }
+
+        .button-group button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="input-container">
+    <div class="html-title">
+        答题卡装箱单生成工具
+    </div>
+    <div>
+        <label for="region">地区：</label>
+        <input type="text" class="input-field-region" id="region" value="嘉兴市">
+    </div>
+    <div class="radio-group">
+        <label>单页重复显示：</label>
+        <label>
+            <input type="radio" name="duplicate" value="0" checked> 否
+        </label>
+        <label>
+            <input type="radio" name="duplicate" value="1"> 是
+        </label>
+    </div>
+    <div>
+        <label for="subjectCount">科目数量：</label>
+        <select id="subjectCount" onchange="updateVisibleInputs()">
+            <!-- 1-20的选项将由JavaScript生成 -->
+        </select>
+    </div>
+    <div id="subjectInputs">
+        <!-- 所有20个输入框将在页面加载时生成 -->
+    </div>
+    <div class="button-group">
+        <button onclick="toggleManualInput()" id="toggleBtn">手动输入</button>
+        <button onclick="generateLabels()">生成标签</button>
+        <button onclick="window.print()">打印</button>
+    </div>
+    <div class="manual-input-area" id="manualInputArea">
+        <label for="subjectData"></label>
+        <textarea id="subjectData"
+                  placeholder="每行一个科目，数据用空格分隔。&#10;格式：科目名称 袋数总计 每箱袋数 尾箱超限袋数&#10;示例：&#10;CET4     191    60    10&#10;学考语文 122    30    3&#10;兼容Excel。可以在Excel中将科目的4列数据填写后，将数据复制到本输入框（不要复制标题）"></textarea>
+        <div>
+            <button onclick="fillSampleData()">样例填充</button>
+            <button onclick="parseSubjectData()">识别</button>
+        </div>
+    </div>
+</div>
+
+<div class="print-area" id="printArea">
+    <!-- 这里的容会由 JavaScript 动态生成 -->
+</div>
+
+<script>
+    // 初始化时生成所有20个输入框
+    function initializeSubjectInputs() {
+        const container = document.getElementById('subjectInputs');
+        container.innerHTML = '';
+
+        for (let i = 1; i <= 20; i++) {
+            const subjectDiv = document.createElement('div');
+            subjectDiv.className = 'subject-row';
+            subjectDiv.innerHTML = `
+                    <div class="subject-inputs">
+                        <label for="subjectType${i}">科目${i}名称:</label>
+                        <input type="text" class="input-field" id="subjectType${i}">
+                        
+                        <label for="totalBags${i}">袋数总计:</label>
+                        <input type="number" class="input-field" id="totalBags${i}">
+                        
+                        <label for="bagsPerBox${i}">每箱袋数:</label>
+                        <input type="number" class="input-field" id="bagsPerBox${i}">
+                        
+                        <label for="maxExtraBags${i}">尾箱超限袋数:</label>
+                        <input type="number" class="input-field" id="maxExtraBags${i}" value="0">
+                    </div>
+                `;
+            container.appendChild(subjectDiv);
+        }
+
+        updateVisibleInputs();
+    }
+
+    // 更新显示的输入框数量
+    function updateVisibleInputs() {
+        const count = parseInt(document.getElementById('subjectCount').value);
+        const rows = document.getElementsByClassName('subject-row');
+
+        // 更新每行的显示状态
+        for (let i = 0; i < rows.length; i++) {
+            if (i < count) {
+                rows[i].classList.add('visible');
+            } else {
+                rows[i].classList.remove('visible');
+            }
+        }
+    }
+
+    // 页面加载时初始化
+    window.onload = function () {
+        // 初始化选择器
+        const select = document.getElementById('subjectCount');
+        for (let i = 1; i <= 20; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i;
+            select.appendChild(option);
+        }
+
+        // 初始化所有输入框
+        initializeSubjectInputs();
+    }
+
+    // generateLabels 函数修改
+    function generateLabels() {
+        const region = document.getElementById('region').value || '地区名称';
+        const printArea = document.getElementById('printArea');
+        const isDuplicate = document.querySelector('input[name="duplicate"]:checked').value === "1";
+        printArea.innerHTML = '';
+
+        let boxes = [];
+
+        // 处理每个科目
+        for (let i = 1; i <= 20; i++) {
+            const subjectType = document.getElementById(`subjectType${i}`).value;
+            const totalBags = parseInt(document.getElementById(`totalBags${i}`).value) || 0;
+            const bagsPerBox = parseInt(document.getElementById(`bagsPerBox${i}`).value) || 0;
+            const maxExtraBags = parseInt(document.getElementById(`maxExtraBags${i}`).value) || 0;
+
+            if (subjectType && totalBags > 0 && bagsPerBox > 0) {
+                let boxCounts = calculateBoxCounts(totalBags, bagsPerBox, maxExtraBags);
+
+                boxCounts.forEach((count, index) => {
+                    boxes.push(createBox({
+                        region: region,
+                        boxNumber: `${index + 1}/${boxCounts.length}`,
+                        count: count,
+                        type: subjectType
+                    }));
+                });
+            }
+        }
+
+        let htmlElements = [];
+        // 分页显示标签
+        if (isDuplicate) {
+            // 重复显示模式：每页显示相同的内容
+            for (let i = 0; i < boxes.length; i++) {
+                const page = document.createElement('div');
+                page.className = 'page';
+
+                // 上半部分
+                const container1 = document.createElement('div');
+                container1.className = 'box-container';
+                container1.appendChild(boxes[i].cloneNode(true));
+                page.appendChild(container1);
+
+                // 下半部分（复制上半部分）
+                const container2 = document.createElement('div');
+                container2.className = 'box-container';
+                container2.appendChild(boxes[i].cloneNode(true));
+                page.appendChild(container2);
+
+                htmlElements.push(page);
+            }
+        } else {
+            // 原有的显示模式：每页显示两个不同的标签
+            for (let i = 0; i < boxes.length; i += 2) {
+                const page = document.createElement('div');
+                page.className = 'page';
+
+                const container1 = document.createElement('div');
+                container1.className = 'box-container';
+                container1.appendChild(boxes[i]);
+                page.appendChild(container1);
+
+                if (i + 1 < boxes.length) {
+                    const container2 = document.createElement('div');
+                    container2.className = 'box-container';
+                    container2.appendChild(boxes[i + 1]);
+                    page.appendChild(container2);
+                }
+
+                htmlElements.push(page);
+            }
+        }
+
+        setTimeout(() => htmlElements.forEach(e => printArea.appendChild(e)), 50);
+    }
+
+    function createBox({region, boxNumber, count, type}) {
+        const box = document.createElement('div');
+        box.className = 'box';
+
+        box.innerHTML = `
+                <div class="region">${region}</div>
+                <div class="box-number">
+                    <div class="box-number-row">
+                        <span class="box-label">箱号</span>
+                        <span class="box-number-content">${boxNumber}</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="box-number-row">
+                        <span class="box-label">袋数</span>
+                        <span class="box-number-content">${count}</span>
+                    </div>
+                </div>
+                <div class="subject-type">${type}</div>
+            `;
+        return box;
+    }
+
+    // 新增计算箱数的函数
+    function calculateBoxCounts(totalBags, bagsPerBox, maxExtraBags) {
+        let boxCounts = [];
+        let remainingBags = totalBags;
+
+        // 如果总数小于等于每箱袋数，直接返回一箱
+        if (totalBags <= bagsPerBox) {
+            return [totalBags];
+        }
+
+        // 先计算完整的箱子
+        while (remainingBags > bagsPerBox) {
+            boxCounts.push(bagsPerBox);
+            remainingBags -= bagsPerBox;
+        }
+
+        // 处理最后的不完整箱
+        if (remainingBags > 0) {
+            // 检查是否需要合并最后两箱
+            if (boxCounts.length > 0 &&
+                (remainingBags + bagsPerBox) <= (bagsPerBox + maxExtraBags)) {
+                // 合并最后两箱
+                boxCounts[boxCounts.length - 1] += remainingBags;
+            } else {
+                // 添加新的一箱
+                boxCounts.push(remainingBags);
+            }
+        }
+
+        return boxCounts;
+    }
+
+    // 切换手动输入区域的显示/隐藏
+    function toggleManualInput() {
+        const area = document.getElementById('manualInputArea');
+        const btn = document.getElementById('toggleBtn');
+        const isVisible = area.classList.contains('visible');
+
+        if (isVisible) {
+            area.classList.remove('visible');
+            btn.textContent = '手动输入';
+        } else {
+            area.classList.add('visible');
+            btn.textContent = '隐藏输入';
+        }
+    }
+
+    // 修改样例填充函数
+    function fillSampleData() {
+        const textarea = document.getElementById('subjectData');
+        const currentContent = textarea.value.trim();
+
+        // 检查是否已有内容
+        if (currentContent) {
+            if (!confirm('文本框中已有内容，是否清空并填充样例数据？')) {
+                return;
+            }
+        }
+
+        textarea.value = "CET4\t191\t60\t10\nCET6\t122\t30\t5\n学考语文\t88\t40\t8\n日语\t156\t50\t10\n13000英语专升本\t95\t35\t5";
+    }
+
+    // 修改解析函数，增加数据验证
+    function parseSubjectData() {
+        const data = document.getElementById('subjectData').value;
+        const lines = data.trim().split('\n');
+        const validLines = lines.filter(line => line.trim()); // 过滤空行
+
+        // 处理并验证每行数据
+        const validData = validLines.filter(line => {
+            const parts = line.trim().split(/\s+/);
+            // 检查是否至少有科目名称、袋数总计和每箱袋数
+            return parts.length >= 3 &&
+                !isNaN(parts[1]) && // 验证袋数总计是数字
+                !isNaN(parts[2]);   // 验证每箱袋数是数字
+        });
+
+        if (validData.length === 0) {
+            alert('没有找到有效的数据行！');
+            return;
+        }
+
+        // 设置科目数量
+        const select = document.getElementById('subjectCount');
+        select.value = validData.length;
+        updateVisibleInputs();
+
+        // 处理每行数据
+        validData.forEach((line, index) => {
+            const parts = line.trim().split(/\s+/);
+            const subjectIndex = index + 1;
+
+            // 设置科目名称
+            document.getElementById(`subjectType${subjectIndex}`).value = parts[0];
+            // 设置袋数总计
+            document.getElementById(`totalBags${subjectIndex}`).value = parts[1];
+            // 设置每箱袋数
+            document.getElementById(`bagsPerBox${subjectIndex}`).value = parts[2];
+            // 设置尾箱超限袋数（如果有且是有效数字）
+            document.getElementById(`maxExtraBags${subjectIndex}`).value =
+                (parts[3] && !isNaN(parts[3])) ? parts[3] : '0';
+        });
+    }
+</script>
+</body>
+</html>
