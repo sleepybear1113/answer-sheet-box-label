@@ -293,16 +293,16 @@
             subjectDiv.className = 'subject-row';
             subjectDiv.innerHTML = `
                     <div class="subject-inputs">
-                        <label for="subjectType${i}">科目${i}名称:</label>
+                        <label for="subjectType${i}">科目${i}名称</label>
                         <input type="text" class="input-field" id="subjectType${i}">
-                        
-                        <label for="totalBags${i}">袋数总计:</label>
-                        <input type="number" class="input-field" id="totalBags${i}">
-                        
-                        <label for="bagsPerBox${i}">每箱袋数:</label>
-                        <input type="number" class="input-field" id="bagsPerBox${i}">
-                        
-                        <label for="maxExtraBags${i}">尾箱超限袋数:</label>
+
+                        <label for="totalBags${i}">袋数总计</label>
+                        <input type="number" class="input-field" id="totalBags${i}" min="1">
+
+                        <label for="bagsPerBox${i}">每箱袋数</label>
+                        <input type="number" class="input-field" id="bagsPerBox${i}" min="1">
+
+                        <label for="maxExtraBags${i}">尾箱超限袋数</label>
                         <input type="number" class="input-field" id="maxExtraBags${i}" value="0">
                     </div>
                 `;
@@ -333,8 +333,9 @@
         const select = document.getElementById('subjectCount');
         for (let i = 1; i <= 20; i++) {
             const option = document.createElement('option');
-            option.value = i;
-            option.textContent = i;
+            let s = String(i);
+            option.value = s;
+            option.textContent = s;
             select.appendChild(option);
         }
 
